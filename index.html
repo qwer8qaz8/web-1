@@ -14,11 +14,14 @@
             --accent-rgb: 56, 189, 248;
             --sun-pos-x: 50%;
             --sun-pos-y: 100%;
+            --mouse-x: 50%;
+            --mouse-y: 50%;
         }
 
         body {
             font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-            background: radial-gradient(circle at var(--sun-pos-x) var(--sun-pos-y), 
+            /* Background shifts based on time AND mouse position */
+            background: radial-gradient(circle at calc(var(--sun-pos-x) + (var(--mouse-x) - 50%) * 0.1) calc(var(--sun-pos-y) + (var(--mouse-y) - 50%) * 0.1), 
                                         hsl(var(--sky-hue), 80%, calc(var(--sky-brightness) + 20%)) 0%, 
                                         hsl(var(--sky-hue), 60%, var(--sky-brightness)) 50%, 
                                         hsl(var(--sky-hue), 70%, calc(var(--sky-brightness) - 10%)) 100%);
@@ -28,16 +31,13 @@
             justify-content: center;
             align-items: center;
             overflow: hidden;
-            transition: background 2s ease-in-out;
+            perspective: 1000px; /* Required for 3D tilt */
         }
 
-        /* Grain Texture Layer */
         body::before {
             content: "";
             position: fixed;
             inset: 0;
-            width: 100%;
-            height: 100%;
             opacity: 0.04;
             pointer-events: none;
             z-index: 1;
@@ -52,8 +52,16 @@
             -webkit-backdrop-filter: blur(40px) saturate(180%) contrast(90%);
             border: 1.5px solid rgba(255, 255, 255, 0.15);
             border-radius: 35px;
-            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3), inset 0 0 0 1px rgba(255, 255, 255, 0.05);
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
             padding: 35px;
+            transition: transform 0.1s ease-out, background 0.3s ease, box-shadow 0.3s ease;
+            transform-style: preserve-3d;
+        }
+
+        .glass:hover {
+            background: rgba(255, 255, 255, 0.12);
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.4);
+            border: 1.5px solid rgba(255, 255, 255, 0.25);
         }
 
         #dashboard {
@@ -63,71 +71,37 @@
             grid-template-columns: 1.4fr 1fr;
             grid-template-rows: auto auto;
             gap: 20px;
+            pointer-events: none; /* Allows mouse tracking through container */
         }
-
-        .header-widget { grid-column: 1 / span 1; }
+        
+        #dashboard > * { pointer-events: auto; }
 
         #time-now {
             font-size: 3.8rem;
             font-weight: 700;
             letter-spacing: -2px;
-            line-height: 1;
             background: linear-gradient(135deg, #ffffff 30%, rgb(var(--accent-rgb)) 100%);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
+            transform: translateZ(20px); /* Lifts text off glass */
         }
 
-        #date-now {
-            opacity: 0.7;
-            font-size: 0.95rem;
-            margin-bottom: 8px;
-            font-weight: 500;
-            text-transform: uppercase;
-            letter-spacing: 3px;
-        }
-
-        .weather-widget {
-            grid-column: 2 / span 1;
-            display: grid;
-            grid-template-columns: auto 1fr;
-            gap: 20px;
-            align-items: center;
-        }
-
-        #temp { font-size: 3.2rem; font-weight: 700; letter-spacing: -1px; }
-        
         #weather-icon-inner {
             color: rgb(var(--accent-rgb));
             filter: drop-shadow(0 0 15px rgba(var(--accent-rgb), 0.6));
+            display: inline-block;
+            transition: transform 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
         }
+        
+        .glass:hover #weather-icon-inner { transform: scale(1.1) rotate(5deg); }
 
-        .weather-details {
-            grid-column: 1 / span 2;
-            display: flex;
-            justify-content: space-between;
-            margin-top: 20px;
-            padding-top: 20px;
-            border-top: 1px solid rgba(255,255,255,0.1);
-        }
-
-        .detail-item { text-align: center; }
-        .detail-label { opacity: 0.5; font-size: 0.65rem; text-transform: uppercase; font-weight: 700; display: block; margin-bottom: 4px; }
-        .detail-val { font-size: 0.9rem; font-weight: 600; }
-
-        .calendar-section { grid-column: 1 / span 2; }
-        #month-name { margin-bottom: 25px; font-size: 1.1rem; font-weight: 600; letter-spacing: 1px; text-align: center; }
-        .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 10px; }
-        .cal-head { font-size: 0.7rem; opacity: 0.4; text-align: center; font-weight: 800; }
         .cal-day {
-            aspect-ratio: 2;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            border-radius: 14px;
-            font-size: 0.95rem;
-            background: rgba(255, 255, 255, 0.03);
-            border: 1px solid rgba(255, 255, 255, 0.03);
-            font-weight: 500;
+            transition: transform 0.2s ease, background 0.2s ease;
+        }
+
+        .cal-day:hover:not(.today) {
+            background: rgba(255, 255, 255, 0.1);
+            transform: translateY(-2px);
         }
 
         .cal-day.today {
@@ -136,52 +110,93 @@
             font-weight: 700;
             box-shadow: 0 8px 20px rgba(255, 255, 255, 0.3);
             border: none;
+            animation: pulse 2s infinite;
         }
 
+        @keyframes pulse {
+            0% { box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.4); }
+            70% { box-shadow: 0 0 0 15px rgba(255, 255, 255, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(255, 255, 255, 0); }
+        }
+
+        /* Simplified Grid for Mobile */
         @media (max-width: 750px) {
             #dashboard { grid-template-columns: 1fr; }
             .header-widget, .weather-widget { grid-column: 1; }
         }
     </style>
 </head>
-<body onload="init()">
+<body>
 
     <div id="dashboard">
-        <div class="glass header-widget">
-            <div id="date-now">...</div>
+        <div class="glass header-widget tiltable">
+            <div id="date-now" style="opacity: 0.7; font-size: 0.95rem; margin-bottom: 8px; font-weight: 500; text-transform: uppercase; letter-spacing: 3px;">...</div>
             <div id="time-now">00:00</div>
         </div>
 
-        <div class="glass weather-widget">
+        <div class="glass weather-widget tiltable">
             <div id="weather-icon"><span id="weather-icon-inner"><i data-lucide="cloud-sun" size="52"></i></span></div>
             <div style="text-align: right;">
-                <div id="temp">--°F</div>
+                <div id="temp" style="font-size: 3.2rem; font-weight: 700;">--°F</div>
                 <div id="weather-desc" style="font-size: 0.7rem; opacity: 0.7; font-weight: 700; text-transform: uppercase;">Syncing...</div>
             </div>
             
-            <div class="weather-details">
-                <div class="detail-item">
-                    <span class="detail-label">High/Low</span>
-                    <span class="detail-val" id="hi-low">-- / --</span>
+            <div class="weather-details" style="grid-column: 1 / span 2; display: flex; justify-content: space-between; margin-top: 20px; padding-top: 20px; border-top: 1px solid rgba(255,255,255,0.1);">
+                <div class="detail-item" style="text-align: center;">
+                    <span style="opacity: 0.5; font-size: 0.65rem; text-transform: uppercase; font-weight: 700; display: block;">High/Low</span>
+                    <span id="hi-low" style="font-size: 0.9rem; font-weight: 600;">-- / --</span>
                 </div>
-                <div class="detail-item">
-                    <span class="detail-label">Real Feel</span>
-                    <span class="detail-val" id="real-feel">--°F</span>
+                <div class="detail-item" style="text-align: center;">
+                    <span style="opacity: 0.5; font-size: 0.65rem; text-transform: uppercase; font-weight: 700; display: block;">Real Feel</span>
+                    <span id="real-feel" style="font-size: 0.9rem; font-weight: 600;">--°F</span>
                 </div>
-                <div class="detail-item">
-                    <span class="detail-label">Rain Chance</span>
-                    <span class="detail-val" id="rain-chance">--%</span>
+                <div class="detail-item" style="text-align: center;">
+                    <span style="opacity: 0.5; font-size: 0.65rem; text-transform: uppercase; font-weight: 700; display: block;">Rain Chance</span>
+                    <span id="rain-chance" style="font-size: 0.9rem; font-weight: 600;">--%</span>
                 </div>
             </div>
         </div>
 
-        <div class="glass calendar-section">
-            <div id="month-name">Month</div>
-            <div class="calendar-grid" id="calendar-grid"></div>
+        <div class="glass calendar-section tiltable" style="grid-column: 1 / span 2;">
+            <div id="month-name" style="margin-bottom: 25px; font-size: 1.1rem; font-weight: 600; text-align: center;">Month</div>
+            <div class="calendar-grid" id="calendar-grid" style="display: grid; grid-template-columns: repeat(7, 1fr); gap: 10px;"></div>
         </div>
     </div>
 
     <script>
+        // === TILT ANIMATION LOGIC ===
+        document.addEventListener('mousemove', (e) => {
+            const xPct = (e.clientX / window.innerWidth) * 100;
+            const yPct = (e.clientY / window.innerHeight) * 100;
+            
+            // Background shift
+            document.documentElement.style.setProperty('--mouse-x', xPct + "%");
+            document.documentElement.style.setProperty('--mouse-y', yPct + "%");
+
+            // Element Tilt
+            const tiltables = document.querySelectorAll('.tiltable');
+            tiltables.forEach(el => {
+                const rect = el.getBoundingClientRect();
+                const centerX = rect.left + rect.width / 2;
+                const centerY = rect.top + rect.height / 2;
+                const mouseX = e.clientX - centerX;
+                const mouseY = e.clientY - centerY;
+                
+                // Tilt intensity
+                const rotateX = (mouseY / rect.height) * -10;
+                const rotateY = (mouseX / rect.width) * 10;
+                
+                el.style.transform = `perspective(1000px) rotateX(${rotateX}deg) rotateY(${rotateY}deg)`;
+            });
+        });
+
+        // Reset tilt when mouse leaves
+        document.addEventListener('mouseleave', () => {
+            const tiltables = document.querySelectorAll('.tiltable');
+            tiltables.forEach(el => el.style.transform = `perspective(1000px) rotateX(0deg) rotateY(0deg)`);
+        });
+
+        // === EXISTING CORE FUNCTIONS ===
         function updateBackground() {
             const now = new Date();
             const timeDecimal = now.getHours() + now.getMinutes() / 60; 
@@ -231,11 +246,9 @@
                     document.getElementById('hi-low').innerText = `${Math.round(data.daily.temperature_2m_max[0])}° / ${Math.round(data.daily.temperature_2m_min[0])}°`;
                     document.getElementById('rain-chance').innerText = data.hourly.precipitation_probability[new Date().getHours()] + "%";
                     
-                    const codes = {0: "Clear", 1: "Mainly Clear", 2: "Partly Cloudy", 3: "Overcast", 45: "Foggy", 61: "Rainy"};
-                    document.getElementById('weather-desc').innerText = codes[data.current.weather_code] || "Conditions Normal";
-
                     const iconMap = (c) => c === 0 ? "sun" : c <= 3 ? "cloud-sun" : c <= 67 ? "cloud-rain" : "cloud";
                     document.getElementById('weather-icon-inner').innerHTML = `<i data-lucide="${iconMap(data.current.weather_code)}" size="52"></i>`;
+                    document.getElementById('weather-desc').innerText = data.current.weather_code === 0 ? "Clear Skies" : "Conditions Normal";
                     lucide.createIcons();
                 });
             } catch (e) { console.error(e); }
@@ -245,13 +258,13 @@
             const grid = document.getElementById('calendar-grid');
             const now = new Date();
             document.getElementById('month-name').innerText = now.toLocaleString('default', { month: 'long', year: 'numeric' });
-            grid.innerHTML = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].map(d => `<div class="cal-head">${d}</div>`).join('');
+            grid.innerHTML = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].map(d => `<div style="font-size: 0.7rem; opacity: 0.4; text-align: center; font-weight: 800;">${d}</div>`).join('');
             const start = new Date(now.getFullYear(), now.getMonth(), 1).getDay();
             const total = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
             for(let i=0; i<start; i++) grid.innerHTML += `<div></div>`;
             for(let d=1; d<=total; d++) {
                 const isToday = d === now.getDate() ? 'today' : '';
-                grid.innerHTML += `<div class="cal-day ${isToday}">${d}</div>`;
+                grid.innerHTML += `<div class="cal-day ${isToday}" style="aspect-ratio: 2; display: flex; align-items: center; justify-content: center; border-radius: 14px; font-size: 0.95rem; background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.03); font-weight: 500;">${d}</div>`;
             }
         }
 
@@ -261,6 +274,8 @@
             setInterval(updateBackground, 60000);
             setInterval(fetchWeather, 900000);
         }
+        
+        init();
     </script>
 </body>
 </html>
