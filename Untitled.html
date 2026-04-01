@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>iOS Frosted Glass Dashboard</title>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        
+        :root {
+            --sky-hue: 220;
+            --sky-brightness: 20%;
+            --accent-rgb: 56, 189, 248;
+            --sun-pos-x: 50%;
+            --sun-pos-y: 100%;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background: radial-gradient(circle at var(--sun-pos-x) var(--sun-pos-y), 
+                                        hsl(var(--sky-hue), 80%, calc(var(--sky-brightness) + 20%)) 0%, 
+                                        hsl(var(--sky-hue), 60%, var(--sky-brightness)) 50%, 
+                                        hsl(var(--sky-hue), 70%, calc(var(--sky-brightness) - 10%)) 100%);
+            color: white;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+            transition: background 2s ease-in-out;
+        }
+
+        /* The Grain/Distortion Overlay */
+        body::before {
+            content: "";
+            position: fixed;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            opacity: 0.04; /* Very subtle texture */
+            pointer-events: none;
+            z-index: 1;
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+        }
+
+        .glass {
+            position: relative;
+            z-index: 2;
+            background: rgba(255, 255, 255, 0.08); /* Increased base opacity for contrast */
+            /* iOS Style: Blur + Saturation + Contrast */
+            backdrop-filter: blur(40px) saturate(180%) contrast(90%);
+            -webkit-backdrop-filter: blur(40px) saturate(180%) contrast(90%);
+            
+            border: 1.5px solid rgba(255, 255, 255, 0.15);
+            border-radius: 35px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3), 
+                        inset 0 0 0 1px rgba(255, 255, 255, 0.05); /* Inner highlight */
+            padding: 35px;
+        }
+
+        #dashboard {
+            display: grid;
+            width: 95%;
+            max-width: 1000px;
+            grid-template-columns: 1.4fr 1fr;
+            grid-template-rows: auto auto;
+            gap: 20px;
+        }
+
+        /* Clock Area */
+        .header-widget {
+            grid-column: 1 / span 1;
+        }
+
+        #time-now {
+            font-size: 3.8rem;
+            font-weight: 700;
+            letter-spacing: -2px;
+            line-height: 1;
+            /* High Contrast Gradient */
+            background: linear-gradient(135deg, #ffffff 30%, rgb(var(--accent-rgb)) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-shadow: 0 4px 10px rgba(0,0,0,0.1);
+        }
+
+        #date-now {
+            opacity: 0.7;
+            font-size: 0.95rem;
+            margin-bottom: 8px;
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 3px;
+        }
+
+        /* Weather Widget */
+        .weather-widget {
+            grid-column: 2 / span 1;
+            display: grid;
+            grid-template-columns: auto 1fr;
+            gap: 20px;
+            align-items: center;
+        }
+
+        #temp { font-size: 3.2rem; font-weight: 700; letter-spacing: -1px; }
+        
+        #weather-icon-inner {
+            color: rgb(var(--accent-rgb));
+            filter: drop-shadow(0 0 15px rgba(var(--accent-rgb), 0.6));
+        }
+
+        .weather-details {
+            grid-column: 1 / span 2;
+            display: flex;
+            justify-content: space-between;
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .detail-item { text-align: center; }
+        .detail-label { opacity: 0.5; font-size: 0.65rem; text-transform: uppercase; font-weight: 700; display: block; margin-bottom: 4px; }
+        .detail-val { font-size: 0.9rem; font-weight: 600; }
+
+        /* Calendar */
+        .calendar-section { grid-column: 1 / span 2; }
+        #month-name {
+            margin-bottom: 25px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            letter-spacing: 1px;
+            text-align: center;
+        }
+
+        .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 10px; }
+        .cal-head { font-size: 0.7rem; opacity: 0.4; text-align: center; font-weight: 800; }
+        .cal-day {
+            aspect-ratio: 2;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 14px;
+            font-size: 0.95rem;
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.03);
+            font-weight: 500;
+        }
+
+        .cal-day.today {
+            background: #fff;
+            color: #000;
+            font-weight: 700;
+            box-shadow: 0 8px 20px rgba(255, 255, 255, 0.3);
+            border: none;
+        }
+
+        @media (max-width: 750px) {
+            #dashboard { grid-template-columns: 1fr; padding: 10px; }
+            .header-widget, .weather-widget { grid-column: 1; }
+        }
+    </style>
+</head>
+<body onload="init()">
+
+    <div id="dashboard">
+        <div class="glass header-widget">
+            <div id="date-now">...</div>
+            <div id="time-now">00:00</div>
+        </div>
+
+        <div class="glass weather-widget">
+            <div id="weather-icon"><span id="weather-icon-inner"><i data-lucide="cloud-sun" size="52"></i></span></div>
+            <div style="text-align: right;">
+                <div id="temp">--°F</div>
+                <div id="weather-desc" style="font-size: 0.7rem; opacity: 0.7; font-weight: 700; text-transform: uppercase;">Syncing...</div>
+            </div>
+            
+            <div class="weather-details">
+                <div class="detail-item">
+                    <span class="detail-label">High/Low</span>
+                    <span class="detail-val" id="hi-low">-- / --</span>
+                </div>
+                <div class="detail-item">
+                    <span class="detail-label">Real Feel</span>
+                    <span class="detail-val" id="real-feel">--°F</span>
+                </div>
+                <div class="detail-item">
+                    <span class="detail-label">Rain Chance</span>
+                    <span class="detail-val" id="rain-chance">--%</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="glass calendar-section">
+            <div id="month-name">Month</div>
+            <div class="calendar-grid" id="calendar-grid"></div>
+        </div>
+    </div>
+
+    <script>
+        function updateBackground() {
+            const now = new Date();
+            const timeDecimal = now.getHours() + now.getMinutes() / 60; 
+            let hue, brightness, sunX, sunY, accentRGB;
+
+            if (timeDecimal >= 5 && timeDecimal < 8) { // Sunrise
+                const pct = (timeDecimal - 5) / 3;
+                hue = 15 + pct * 25; 
+                brightness = 25 + pct * 20;
+                sunX = (pct * 30) + "%"; sunY = (90 - pct * 40) + "%";
+                accentRGB = "255, 170, 100";
+            } else if (timeDecimal >= 8 && timeDecimal < 17) { // Day
+                const pct = (timeDecimal - 8) / 9;
+                hue = 205 + pct * 15; 
+                brightness = 45 - pct * 5;
+                sunX = (30 + pct * 40) + "%"; sunY = (20 + pct * 20) + "%";
+                accentRGB = "56, 189, 248";
+            } else if (timeDecimal >= 17 && timeDecimal < 20) { // Sunset
+                const pct = (timeDecimal - 17) / 3;
+                hue = 15 - pct * 15; 
+                brightness = 40 - pct * 25;
+                sunX = (70 + pct * 30) + "%"; sunY = (40 + pct * 60) + "%";
+                accentRGB = "255, 120, 150";
+            } else { // Night
+                hue = 230; brightness = 12; sunX = "50%"; sunY = "120%";
+                accentRGB = "150, 160, 255";
+            }
+
+            document.documentElement.style.setProperty('--sky-hue', hue);
+            document.documentElement.style.setProperty('--sky-brightness', brightness + "%");
+            document.documentElement.style.setProperty('--sun-pos-x', sunX);
+            document.documentElement.style.setProperty('--sun-pos-y', sunY);
+            document.documentElement.style.setProperty('--accent-rgb', accentRGB);
+        }
+
+        function updateClock() {
+            const now = new Date();
+            document.getElementById('date-now').innerText = now.toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' });
+            document.getElementById('time-now').innerText = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true });
+        }
+
+        async function fetchWeather() {
+            try {
+                navigator.geolocation.getCurrentPosition(async (pos) => {
+                    const lat = pos.coords.latitude;
+                    const lon = pos.coords.longitude;
+                    const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,apparent_temperature,weather_code&daily=temperature_2m_max,temperature_2m_min&hourly=precipitation_probability&temperature_unit=fahrenheit&timezone=auto`;
+                    const res = await fetch(url);
+                    const data = await res.json();
+                    
+                    document.getElementById('temp').innerText = Math.round(data.current.temperature_2m) + "°F";
+                    document.getElementById('real-feel').innerText = Math.round(data.current.apparent_temperature) + "°F";
+                    document.getElementById('hi-low').innerText = `${Math.round(data.daily.temperature_2m_max[0])}° / ${Math.round(data.daily.temperature_2m_min[0])}°`;
+                    document.getElementById('rain-chance').innerText = data.hourly.precipitation_probability[new Date().getHours()] + "%";
+                    
+                    const codes = {0: "Clear", 1: "Mainly Clear", 2: "Partly Cloudy", 3: "Overcast", 45: "Foggy", 61: "Rainy"};
+                    document.getElementById('weather-desc').innerText = codes[data.current.weather_code] || "Conditions Normal";
+
+                    const iconMap = (c) => c === 0 ? "sun" : c <= 3 ? "cloud-sun" : c <= 67 ? "cloud-rain" : "cloud";
+                    document.getElementById('weather-icon-inner').innerHTML = `<i data-lucide="${iconMap(data.current.weather_code)}" size="52"></i>`;
+                    lucide.createIcons();
+                });
+            } catch (e) { console.error(e); }
+        }
+
+        function buildCalendar() {
+            const grid = document.getElementById('calendar-grid');
+            const now = new Date();
+            document.getElementById('month-name').innerText = now.toLocaleString('default', { month: 'long', year: 'numeric' });
+            grid.innerHTML = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].map(d => `<div class="cal-head">${d}</div>`).join('');
+            const start = new Date(now.getFullYear(), now.getMonth(), 1).getDay();
+            const total = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+            for(let i=0; i<start; i++) grid.innerHTML += `<div></div>`;
+            for(let d=1; d<=total; d++) {
+                const isToday = d === now.getDate() ? 'today' : '';
+                grid.innerHTML += `<div class="cal-day ${isToday}">${d}</div>`;
+            }
+        }
+
+        function init() {
+            updateBackground(); updateClock(); buildCalendar(); fetchWeather();
+            setInterval(updateClock, 1000);
+            setInterval(updateBackground, 60000);
+            setInterval(fetchWeather, 900000);
+        }
+    </script>
+</body>
+</html>
